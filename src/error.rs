@@ -25,6 +25,8 @@ pub enum CtpError {
     InvalidParameterError(String),
     /// 内存错误
     MemoryError(String),
+    ///无效的路径
+    InvalidPath(String),
     /// 其他错误
     Other(String),
 }
@@ -41,6 +43,7 @@ impl fmt::Display for CtpError {
             CtpError::TimeoutError(msg) => write!(f, "超时错误: {}", msg),
             CtpError::InvalidParameterError(msg) => write!(f, "无效参数错误: {}", msg),
             CtpError::MemoryError(msg) => write!(f, "内存错误: {}", msg),
+            CtpError::InvalidPath(msg) => write!(f, "无效的路径: {}", msg),
             CtpError::Other(msg) => write!(f, "其他错误: {}", msg),
         }
     }

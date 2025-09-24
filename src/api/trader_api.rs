@@ -3,6 +3,7 @@
 //! 提供期货交易功能，包括下单、撤单、查询等
 
 use crate::api::md_api::DepthMarketDataField;
+use crate::api::utils::normalize_flow_path;
 use crate::api::{safe_cstr_to_string, to_cstring, CtpApi};
 use crate::error::{CtpError, CtpResult};
 use crate::ffi::trader_api::*;
@@ -1055,7 +1056,10 @@ impl TraderApi {
     // * `is_production_mode` - 是否为生产环境模式，默认为true
     pub fn new(flow_path: Option<&str>, is_production_mode: Option<bool>) -> CtpResult<Self> {
         let flow_path_cstr = match flow_path {
-            Some(path) => Some(to_cstring(path)?),
+            Some(path) => {
+                let npath = normalize_flow_path(path)?;
+                Some(to_cstring(npath.as_str())?)
+            }
             None => None,
         };
 

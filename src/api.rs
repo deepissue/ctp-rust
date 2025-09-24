@@ -6,6 +6,7 @@ pub mod async_md_api;
 pub mod async_trader_api;
 pub mod md_api;
 pub mod trader_api;
+pub mod utils;
 
 pub use async_md_api::AsyncMdApi;
 pub use async_trader_api::AsyncTraderApi;
