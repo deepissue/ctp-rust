@@ -1,6 +1,6 @@
 [package]
 name = "ctp-rust"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["36625090 <36625090@qq.com>"]
 edition = "2021"
 description = "Safe Rust bindings for CTP (Comprehensive Transaction Platform) and its variations for Chinese financial markets"
