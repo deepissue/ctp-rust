@@ -1,8 +1,13 @@
 #ifndef SPI_BRIDGE_H
 #define SPI_BRIDGE_H
 
-#include "../include/ThostFtdcMdApi.h"
-#include "../include/ThostFtdcTraderApi.h"
+#ifdef CTP_PLATFORM_LINUX
+#include "../linux/include/ThostFtdcMdApi.h"
+#include "../linux/include/ThostFtdcTraderApi.h"
+#elif defined(CTP_PLATFORM_MACOS)
+#include "../mac64/include/ThostFtdcMdApi.h"
+#include "../mac64/include/ThostFtdcTraderApi.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,18 +1,57 @@
 #include "ctp_wrapper.h"
-#include "../../common/debug_logger.h"
-#include "../include/ThostFtdcMdApi.h"
-#include "../include/ThostFtdcTraderApi.h"
-#include <iostream>
+#include "logger.h"
 #include <stdio.h>
+
+#ifdef CTP_PLATFORM_LINUX
+#include "../linux/include/ThostFtdcMdApi.h"
+#include "../linux/include/ThostFtdcTraderApi.h"
+#elif defined(CTP_PLATFORM_MACOS)
+#include "../mac64/include/ThostFtdcMdApi.h"
+#include "../mac64/include/ThostFtdcTraderApi.h"
+#endif
+
+// Version detection global variable
+const char *CTP_DETECTED_VERSION = nullptr;
+
+// Initialize version detection
+static void detect_version() {
+  static bool detected = false;
+  if (!detected) {
+    const char *version = CThostFtdcMdApi::GetApiVersion();
+    if (version) {
+      CTP_DETECTED_VERSION = version;
+      CTP_DEBUG("检测到CTP版本: %s", version);
+    }
+    detected = true;
+  }
+}
+
 // MD API wrappers
 extern "C" {
 void *CThostFtdcMdApi_CreateFtdcMdApi(const char *pszFlowPath, int bIsUsingUdp,
                                       int bIsMulticast, int bIsProductionMode) {
+  detect_version();
   CTP_DEBUG("创建MD API, flow_path=%s, udp=%d, multicast=%d, production=%d",
             pszFlowPath ? pszFlowPath : "null", bIsUsingUdp, bIsMulticast,
             bIsProductionMode);
-  void *api = CThostFtdcMdApi::CreateFtdcMdApi(pszFlowPath, bIsUsingUdp != 0,
-                                               bIsMulticast != 0);
+
+  void *api = nullptr;
+
+#ifdef CTP_PLATFORM_LINUX
+  // Linux版本支持production mode参数
+  api = CThostFtdcMdApi::CreateFtdcMdApi(
+      pszFlowPath, bIsUsingUdp != 0, bIsMulticast != 0, bIsProductionMode != 0);
+  CTP_DEBUG("使用Linux版本4参数API创建MD API");
+#else
+  // macOS版本不支持production mode参数
+  api = CThostFtdcMdApi::CreateFtdcMdApi(pszFlowPath, bIsUsingUdp != 0,
+                                         bIsMulticast != 0);
+  if (bIsProductionMode != 0) {
+    CTP_DEBUG("警告: macOS版本不支持生产模式参数，已忽略");
+  }
+  CTP_DEBUG("使用macOS版本3参数API创建MD API");
+#endif
+
   CTP_DEBUG("MD API创建完成, api指针=%p", api);
   return api;
 }
@@ -49,15 +88,15 @@ const char *CThostFtdcMdApi_GetTradingDay(void *api) {
 
 void CThostFtdcMdApi_RegisterFront(void *api, const char *pszFrontAddress) {
   if (api) {
-    static_cast<CThostFtdcMdApi *>(api)->RegisterFront(
-        const_cast<char *>(pszFrontAddress));
+    char *frontAddress = const_cast<char *>(pszFrontAddress);
+    static_cast<CThostFtdcMdApi *>(api)->RegisterFront(frontAddress);
   }
 }
 
 void CThostFtdcMdApi_RegisterNameServer(void *api, const char *pszNsAddress) {
   if (api) {
-    static_cast<CThostFtdcMdApi *>(api)->RegisterNameServer(
-        const_cast<char *>(pszNsAddress));
+    char *nsAddress = const_cast<char *>(pszNsAddress);
+    static_cast<CThostFtdcMdApi *>(api)->RegisterNameServer(nsAddress);
   }
 }
 
@@ -77,16 +116,11 @@ void CThostFtdcMdApi_RegisterSpi(void *api, void *pSpi) {
 
 int CThostFtdcMdApi_ReqUserLogin(void *api, void *pReqUserLoginField,
                                  int nRequestID) {
-  CTP_DEBUG("MD用户登录请求开始, api=%p, request_id=%d", api, nRequestID);
   if (api) {
-    int result = static_cast<CThostFtdcMdApi *>(api)->ReqUserLogin(
+    return static_cast<CThostFtdcMdApi *>(api)->ReqUserLogin(
         static_cast<CThostFtdcReqUserLoginField *>(pReqUserLoginField),
         nRequestID);
-    CTP_DEBUG("MD用户登录请求完成, request_id=%d, 返回值=%d", nRequestID,
-              result);
-    return result;
   }
-  CTP_DEBUG("MD用户登录请求失败: API实例为空, request_id=%d", nRequestID);
   return -1;
 }
 
@@ -144,9 +178,13 @@ void *CThostFtdcTraderApi_CreateFtdcTraderApi(const char *pszFlowPath,
                                               int bIsProductionMode) {
   CTP_DEBUG("创建Trader API, flow_path=%s, production=%d",
             pszFlowPath ? pszFlowPath : "null", bIsProductionMode);
+
+  // TraderApi只接受一个参数，忽略生产模式参数
   void *api = CThostFtdcTraderApi::CreateFtdcTraderApi(pszFlowPath);
+  if (bIsProductionMode != 0) {
+    CTP_DEBUG("警告: TraderApi不支持生产模式参数，已忽略");
+  }
   CTP_DEBUG("Trader API创建完成, api指针=%p", api);
-  fflush(stdout);
   return api;
 }
 
@@ -163,8 +201,6 @@ void CThostFtdcTraderApi_Init(void *api) {
     CTP_DEBUG("Trader API初始化完成, api=%p", api);
   } else {
     CTP_DEBUG("Trader API初始化失败: API实例为空");
-    std::cout << "[CTP_API] ❌ API实例为空!" << std::endl;
-    std::cout.flush();
   }
 }
 
@@ -183,23 +219,17 @@ const char *CThostFtdcTraderApi_GetTradingDay(void *api) {
 }
 
 void CThostFtdcTraderApi_RegisterFront(void *api, const char *pszFrontAddress) {
-  CTP_DEBUG("注册前置机, api=%p, front_address=%s", api,
-            pszFrontAddress ? pszFrontAddress : "null");
   if (api) {
-    static_cast<CThostFtdcTraderApi *>(api)->RegisterFront(
-        const_cast<char *>(pszFrontAddress));
-    CTP_DEBUG("注册前置机完成, api=%p", api);
-  } else {
-    CTP_DEBUG("注册前置机失败: API实例为空");
-    std::cout << "[CTP_API] ❌ API实例为空!" << std::endl;
+    char *frontAddress = const_cast<char *>(pszFrontAddress);
+    static_cast<CThostFtdcTraderApi *>(api)->RegisterFront(frontAddress);
   }
 }
 
 void CThostFtdcTraderApi_RegisterNameServer(void *api,
                                             const char *pszNsAddress) {
   if (api) {
-    static_cast<CThostFtdcTraderApi *>(api)->RegisterNameServer(
-        const_cast<char *>(pszNsAddress));
+    char *nsAddress = const_cast<char *>(pszNsAddress);
+    static_cast<CThostFtdcTraderApi *>(api)->RegisterNameServer(nsAddress);
   }
 }
 
@@ -221,9 +251,6 @@ void CThostFtdcTraderApi_RegisterSpi(void *api, void *pSpi) {
   if (api) {
     static_cast<CThostFtdcTraderApi *>(api)->RegisterSpi(
         static_cast<CThostFtdcTraderSpi *>(pSpi));
-  } else {
-    std::cout << "[CTP_API] ❌ API实例为空!" << std::endl;
-    std::cout.flush();
   }
 }
 
@@ -257,6 +284,8 @@ int CThostFtdcTraderApi_SubmitUserSystemInfo(void *api, void *pUserSystemInfo) {
 int CThostFtdcTraderApi_RegisterWechatUserSystemInfo(void *api,
                                                      void *pUserSystemInfo) {
   if (api) {
+    // macOS版本不支持微信用户系统信息，使用普通用户系统信息代替
+    CTP_DEBUG("警告: macOS版本不支持微信用户系统信息注册，使用普通注册代替");
     return static_cast<CThostFtdcTraderApi *>(api)->RegisterUserSystemInfo(
         static_cast<CThostFtdcUserSystemInfoField *>(pUserSystemInfo));
   }
@@ -266,6 +295,8 @@ int CThostFtdcTraderApi_RegisterWechatUserSystemInfo(void *api,
 int CThostFtdcTraderApi_SubmitWechatUserSystemInfo(void *api,
                                                    void *pUserSystemInfo) {
   if (api) {
+    // macOS版本不支持微信用户系统信息，使用普通用户系统信息代替
+    CTP_DEBUG("警告: macOS版本不支持微信用户系统信息提交，使用普通提交代替");
     return static_cast<CThostFtdcTraderApi *>(api)->SubmitUserSystemInfo(
         static_cast<CThostFtdcUserSystemInfoField *>(pUserSystemInfo));
   }
@@ -274,16 +305,19 @@ int CThostFtdcTraderApi_SubmitWechatUserSystemInfo(void *api,
 
 int CThostFtdcTraderApi_ReqUserLogin(void *api, void *pReqUserLoginField,
                                      int nRequestID) {
-  CTP_DEBUG("Trader用户登录请求开始, api=%p, request_id=%d", api, nRequestID);
   if (api) {
-    int result = static_cast<CThostFtdcTraderApi *>(api)->ReqUserLogin(
+#ifdef CTP_PLATFORM_MACOS
+    // macOS版本需要额外的系统信息参数
+    static char empty_info[] = "";
+    return static_cast<CThostFtdcTraderApi *>(api)->ReqUserLogin(
         static_cast<CThostFtdcReqUserLoginField *>(pReqUserLoginField),
-        nRequestID, 0, nullptr);
-    CTP_DEBUG("Trader用户登录请求完成, request_id=%d, 返回值=%d", nRequestID,
-              result);
-    return result;
+        nRequestID, 0, empty_info);
+#else
+    return static_cast<CThostFtdcTraderApi *>(api)->ReqUserLogin(
+        static_cast<CThostFtdcReqUserLoginField *>(pReqUserLoginField),
+        nRequestID);
+#endif
   }
-  CTP_DEBUG("Trader用户登录请求失败: API实例为空, request_id=%d", nRequestID);
   return -1;
 }
 
@@ -386,14 +420,10 @@ int CThostFtdcTraderApi_ReqUserLoginWithOTP(void *api,
 
 int CThostFtdcTraderApi_ReqOrderInsert(void *api, void *pInputOrder,
                                        int nRequestID) {
-  CTP_DEBUG("报单录入请求开始, api=%p, request_id=%d", api, nRequestID);
   if (api) {
-    int result = static_cast<CThostFtdcTraderApi *>(api)->ReqOrderInsert(
+    return static_cast<CThostFtdcTraderApi *>(api)->ReqOrderInsert(
         static_cast<CThostFtdcInputOrderField *>(pInputOrder), nRequestID);
-    CTP_DEBUG("报单录入请求完成, request_id=%d, 返回值=%d", nRequestID, result);
-    return result;
   }
-  CTP_DEBUG("报单录入请求失败: API实例为空, request_id=%d", nRequestID);
   return -1;
 }
 
@@ -600,16 +630,11 @@ int CThostFtdcTraderApi_ReqQryInvestorPosition(void *api,
 int CThostFtdcTraderApi_ReqQryTradingAccount(void *api,
                                              void *pQryTradingAccount,
                                              int nRequestID) {
-  CTP_DEBUG("查询资金账户请求开始, api=%p, request_id=%d", api, nRequestID);
   if (api) {
-    int result = static_cast<CThostFtdcTraderApi *>(api)->ReqQryTradingAccount(
+    return static_cast<CThostFtdcTraderApi *>(api)->ReqQryTradingAccount(
         static_cast<CThostFtdcQryTradingAccountField *>(pQryTradingAccount),
         nRequestID);
-    CTP_DEBUG("查询资金账户请求完成, request_id=%d, 返回值=%d", nRequestID,
-              result);
-    return result;
   }
-  CTP_DEBUG("查询资金账户请求失败: API实例为空, request_id=%d", nRequestID);
   return -1;
 }
 
@@ -708,4 +733,8 @@ int CThostFtdcTraderApi_ReqQrySettlementInfo(void *api,
 const char *CThostFtdcTraderApi_GetApiVersion() {
   return CThostFtdcTraderApi::GetApiVersion();
 }
-}
+
+// Debug logging functions 在header中已声明，这里不需要重复实现
+// 实际实现在 debug_logger.cpp 中
+
+} // extern "C"

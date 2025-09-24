@@ -1,12 +1,27 @@
 #ifndef CTP_WRAPPER_H
 #define CTP_WRAPPER_H
 
-#include "../../common/debug_logger.h"
+#include "logger.h"
 #include "spi_bridge.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Platform detection (only define if not already defined by Makefile)
+#ifndef CTP_PLATFORM_LINUX
+#ifndef CTP_PLATFORM_MACOS
+#ifdef __linux__
+#define CTP_PLATFORM_LINUX
+#elif defined(__APPLE__) && defined(__MACH__)
+#define CTP_PLATFORM_MACOS
+#endif
+#endif
+#endif
+
+// Version compatibility detection
+// We'll detect version at runtime based on available library features
+extern const char *CTP_DETECTED_VERSION;
 
 // C wrapper for CTP MD API
 void *CThostFtdcMdApi_CreateFtdcMdApi(const char *pszFlowPath, int bIsUsingUdp,

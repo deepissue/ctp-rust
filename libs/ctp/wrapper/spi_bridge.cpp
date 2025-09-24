@@ -1,5 +1,5 @@
 #include "spi_bridge.h"
-#include "../../common/debug_logger.h"
+#include "logger.h"
 #include <cstring>
 #include <ctime>
 #include <iostream>

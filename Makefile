@@ -6,15 +6,11 @@
 # 默认目标
 all: wrapper build
 
-# 编译C++包装器
-wrapper:
-	@echo "🔨 编译CTP C++包装器..."
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		cd libs/ctp/mac64/wrapper && $(MAKE); \
-	else \
-		cd libs/ctp/linux/wrapper && $(MAKE); \
-	fi
-	@echo "✅ C++包装器编译完成"
+# 编译C++包装器 (使用统一wrapper)
+wrapper: clean-wrapper
+	@echo "🔨 编译CTP统一C++包装器..."
+	cd libs/ctp/wrapper && $(MAKE)
+	@echo "✅ 统一C++包装器编译完成"
 
 # 编译Rust项目
 build: wrapper
@@ -67,15 +63,11 @@ clean:
 	cargo clean
 	@echo "✅ Rust清理完成"
 
-# 清理C++包装器
+# 清理C++包装器 (统一wrapper)
 clean-wrapper:
-	@echo "🧹 清理C++包装器..."
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		cd libs/ctp/mac64/wrapper && $(MAKE) clean; \
-	else \
-		cd libs/ctp/linux/wrapper && $(MAKE) clean; \
-	fi
-	@echo "✅ C++包装器清理完成"
+	@echo "🧹 清理统一C++包装器..."
+	cd libs/ctp/wrapper && $(MAKE) clean
+	@echo "✅ 统一C++包装器清理完成"
 
 # 完全清理
 clean-all: clean clean-wrapper
@@ -102,15 +94,11 @@ doc:
 	cargo doc --no-deps --open
 	@echo "✅ 文档生成完成"
 
-# 安装C++包装器到系统
+# 安装C++包装器到系统 (统一wrapper)
 install-wrapper: wrapper
-	@echo "📦 安装C++包装器..."
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		cd libs/ctp/mac64/wrapper && $(MAKE) install; \
-	else \
-		cd libs/ctp/linux/wrapper && $(MAKE) install; \
-	fi
-	@echo "✅ C++包装器安装完成"
+	@echo "📦 安装统一C++包装器..."
+	cd libs/ctp/wrapper && $(MAKE) install
+	@echo "✅ 统一C++包装器安装完成"
 
 # 检查依赖更新
 update:
@@ -140,8 +128,8 @@ help:
 	@echo "====================="
 	@echo ""
 	@echo "🔨 编译命令:"
-	@echo "  make              - 编译包装器和Rust项目 (默认)"
-	@echo "  make wrapper      - 只编译C++包装器"
+	@echo "  make              - 编译统一包装器和Rust项目 (默认)"
+	@echo "  make wrapper      - 只编译统一C++包装器 (自动检测平台)"
 	@echo "  make build        - 编译Rust项目"
 	@echo "  make release      - 编译发布版本"
 	@echo "  make examples     - 编译示例程序"
@@ -160,13 +148,17 @@ help:
 	@echo ""
 	@echo "🧹 清理命令:"
 	@echo "  make clean        - 清理Rust编译产物"
-	@echo "  make clean-wrapper- 清理C++包装器"
+	@echo "  make clean-wrapper- 清理统一C++包装器"
 	@echo "  make clean-all    - 完全清理"
 	@echo ""
 	@echo "📖 工具命令:"
 	@echo "  make fmt          - 格式化代码"
 	@echo "  make doc          - 生成文档"
 	@echo "  make update       - 更新依赖"
-	@echo "  make install-wrapper - 安装C++包装器到系统"
+	@echo "  make install-wrapper - 安装统一C++包装器到系统"
 	@echo "  make prepare-release - 准备发布"
 	@echo "  make help         - 显示此帮助"
+	@echo ""
+	@echo "🔄 新特性:"
+	@echo "  统一C++包装器     - 自动检测Linux/macOS并处理版本差异"
+	@echo "  跨平台兼容        - 一套代码支持CTP 6.7.7 (macOS) 和 6.7.11 (Linux)"
