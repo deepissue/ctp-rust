@@ -1,6 +1,5 @@
 #include "spi_bridge.h"
 #include "../../common/debug_logger.h"
-#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <iostream>
@@ -19,7 +18,8 @@ public:
   virtual void OnFrontConnected() override {
     CTP_DEBUG("MdSPI OnFrontConnected回调触发");
     if (callbacks.on_front_connected) {
-      CTP_DEBUG("调用Rust回调 on_front_connected, user_data=%p", callbacks.user_data);
+      CTP_DEBUG("调用Rust回调 on_front_connected, user_data=%p",
+                callbacks.user_data);
       callbacks.on_front_connected(callbacks.user_data);
       CTP_DEBUG("Rust回调 on_front_connected 完成");
     } else {
@@ -46,11 +46,11 @@ public:
   virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
                               CThostFtdcRspInfoField *pRspInfo, int nRequestID,
                               bool bIsLast) override {
-    CTP_DEBUG("MdSPI OnRspUserLogin回调触发, request_id=%d, is_last=%s", 
+    CTP_DEBUG("MdSPI OnRspUserLogin回调触发, request_id=%d, is_last=%s",
               nRequestID, bIsLast ? "true" : "false");
     if (pRspInfo) {
-      CTP_DEBUG("MD登录响应信息: ErrorID=%d, ErrorMsg=%.64s", 
-                pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+      CTP_DEBUG("MD登录响应信息: ErrorID=%d, ErrorMsg=%.64s", pRspInfo->ErrorID,
+                pRspInfo->ErrorMsg);
     }
     if (callbacks.on_rsp_user_login) {
       CTP_DEBUG("调用Rust回调 on_rsp_user_login");
@@ -106,7 +106,8 @@ public:
   virtual void OnRtnDepthMarketData(
       CThostFtdcDepthMarketDataField *pDepthMarketData) override {
     if (pDepthMarketData) {
-      CTP_DEBUG("MdSPI OnRtnDepthMarketData回调触发, InstrumentID=%.31s, LastPrice=%.8f", 
+      CTP_DEBUG("MdSPI OnRtnDepthMarketData回调触发, InstrumentID=%.31s, "
+                "LastPrice=%.8f",
                 pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice);
     } else {
       CTP_DEBUG("MdSPI OnRtnDepthMarketData回调触发, 但数据为空");
@@ -139,7 +140,8 @@ public:
   virtual void OnFrontConnected() override {
     CTP_DEBUG("TraderSPI OnFrontConnected回调触发");
     if (callbacks.on_front_connected) {
-      CTP_DEBUG("调用Rust回调 on_front_connected, user_data=%p", callbacks.user_data);
+      CTP_DEBUG("调用Rust回调 on_front_connected, user_data=%p",
+                callbacks.user_data);
       callbacks.on_front_connected(callbacks.user_data);
       CTP_DEBUG("Rust回调 on_front_connected 完成");
     } else {
@@ -178,10 +180,10 @@ public:
   virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
                               CThostFtdcRspInfoField *pRspInfo, int nRequestID,
                               bool bIsLast) override {
-    CTP_DEBUG("TraderSPI OnRspUserLogin回调触发, request_id=%d, is_last=%s", 
+    CTP_DEBUG("TraderSPI OnRspUserLogin回调触发, request_id=%d, is_last=%s",
               nRequestID, bIsLast ? "true" : "false");
     if (pRspInfo) {
-      CTP_DEBUG("Trader登录响应信息: ErrorID=%d, ErrorMsg=%.64s", 
+      CTP_DEBUG("Trader登录响应信息: ErrorID=%d, ErrorMsg=%.64s",
                 pRspInfo->ErrorID, pRspInfo->ErrorMsg);
     }
     if (callbacks.on_rsp_user_login) {
@@ -235,7 +237,7 @@ public:
   // 报单通知
   virtual void OnRtnOrder(CThostFtdcOrderField *pOrder) override {
     if (pOrder) {
-      CTP_DEBUG("TraderSPI OnRtnOrder回调触发, OrderRef=%.13s, OrderStatus=%c", 
+      CTP_DEBUG("TraderSPI OnRtnOrder回调触发, OrderRef=%.13s, OrderStatus=%c",
                 pOrder->OrderRef, pOrder->OrderStatus);
     } else {
       CTP_DEBUG("TraderSPI OnRtnOrder回调触发, 但数据为空");
@@ -248,8 +250,9 @@ public:
   // 成交通知
   virtual void OnRtnTrade(CThostFtdcTradeField *pTrade) override {
     if (pTrade) {
-      CTP_DEBUG("TraderSPI OnRtnTrade回调触发, TradeID=%.21s, Price=%.8f, Volume=%d", 
-                pTrade->TradeID, pTrade->Price, pTrade->Volume);
+      CTP_DEBUG(
+          "TraderSPI OnRtnTrade回调触发, TradeID=%.21s, Price=%.8f, Volume=%d",
+          pTrade->TradeID, pTrade->Price, pTrade->Volume);
     } else {
       CTP_DEBUG("TraderSPI OnRtnTrade回调触发, 但数据为空");
     }

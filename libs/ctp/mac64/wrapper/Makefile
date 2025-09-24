@@ -1,16 +1,16 @@
 # CTP Wrapper Makefile
 # 支持 macOS 和 Linux 平台
 
-# macOS特定配置
+# macOS特定配置 (使用新的lib结构)
 OS = macos
-FRAMEWORK_DIR = ..
+LIB_DIR = ../lib
 SHARED_EXT = dylib
-LINKER_FLAGS = -F$(FRAMEWORK_DIR) -framework thostmduserapi_se -framework thosttraderapi_se
+LINKER_FLAGS = -L$(LIB_DIR) -lthostmduserapi_se -lthosttraderapi_se
 
 # 编译器和标志
 CXX = clang++
 CXXFLAGS = -fPIC -std=c++11 -O2 -Wall -mmacosx-version-min=14.0
-INCLUDES = -I../thostmduserapi_se.framework/Versions/A/Headers -I../../common
+INCLUDES = -I../include -I../../common
 
 # 源文件
 SOURCES = spi_bridge.cpp ctp_wrapper.cpp ../../common/debug_logger.cpp
@@ -31,6 +31,7 @@ shared: $(SHARED_LIB)
 $(SHARED_LIB): $(OBJECTS)
 	@echo "🔗 链接共享库: $@"
 	$(CXX) -shared $(OBJECTS) $(LINKER_FLAGS) -o $@
+	rm -f *.o
 	@echo "✅ 共享库编译完成"
 
 # 编译静态库

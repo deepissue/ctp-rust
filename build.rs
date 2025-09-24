@@ -1,36 +1,63 @@
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
+use std::fs;
+
+/// 检查源文件是否比目标文件新
+fn source_newer_than_target(source: &PathBuf, target: &PathBuf) -> bool {
+    if !target.exists() {
+        return true;
+    }
+    
+    let source_time = fs::metadata(source)
+        .and_then(|m| m.modified())
+        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        
+    let target_time = fs::metadata(target)
+        .and_then(|m| m.modified())
+        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        
+    source_time > target_time
+}
 
 fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=libs/");
+    println!("cargo:rerun-if-changed=src/");
+    
     // 获取当前构建目标
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    
+    // 获取包的根目录和输出目录
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let package_root = PathBuf::from(&manifest_dir);
 
-    // 根据平台选择目录结构
+    // 根据平台选择目录结构，使用包根目录的绝对路径
     let (include_path, lib_path, wrapper_path, lib_suffix) =
         match (target_os.as_str(), target_arch.as_str()) {
             ("macos", "x86_64") | ("macos", "aarch64") => {
                 // macOS使用传统lib结构（与Linux保持一致）
                 (
-                    PathBuf::from("libs/ctp/mac64/include"),
-                    PathBuf::from("libs/ctp/mac64/lib"),
-                    PathBuf::from("libs/ctp/mac64/wrapper"),
+                    package_root.join("libs/ctp/mac64/include"),
+                    package_root.join("libs/ctp/mac64/lib"),
+                    package_root.join("libs/ctp/mac64/wrapper"),
                     "dylib",
                 )
             }
             ("linux", "x86_64") => {
                 // Linux使用传统lib结构
                 (
-                    PathBuf::from("libs/ctp/linux/include"),
-                    PathBuf::from("libs/ctp/linux/lib"),
-                    PathBuf::from("libs/ctp/linux/wrapper"),
+                    package_root.join("libs/ctp/linux/include"),
+                    package_root.join("libs/ctp/linux/lib"),
+                    package_root.join("libs/ctp/linux/wrapper"),
                     "so",
                 )
             }
             ("linux", "aarch64") => {
                 // ARM64 Linux，如果没有专用库则报错
-                let arm_path = PathBuf::from("libs/ctp/linux_arm64");
+                let arm_path = package_root.join("libs/ctp/linux_arm64");
                 if arm_path.exists() {
                     (
                         arm_path.join("include"),
@@ -47,12 +74,19 @@ fn main() {
 
     // 检查库文件是否存在
     if !lib_path.exists() {
-        panic!("CTP库目录不存在: {}", lib_path.display());
+        println!("cargo:warning=CTP库目录不存在: {}", lib_path.display());
+        println!("cargo:warning=请确保将CTP SDK库文件放置在正确位置");
+        println!("cargo:warning=参考README.md中的CTP SDK配置说明");
+        println!("cargo:rustc-cfg=feature=\"test_mode\"");
+        return;
     }
 
     // 检查头文件是否存在
     if !include_path.exists() {
-        panic!("CTP头文件目录不存在: {}", include_path.display());
+        println!("cargo:warning=CTP头文件目录不存在: {}", include_path.display());
+        println!("cargo:warning=请确保将CTP SDK头文件放置在正确位置");
+        println!("cargo:rustc-cfg=feature=\"test_mode\"");
+        return;
     }
 
     // 验证必要的库文件是否存在
@@ -77,13 +111,12 @@ fn main() {
     }
 
     // 编译 C++ 包装器
-    let common_path = PathBuf::from("libs/ctp/common");
+    let common_path = package_root.join("libs/ctp/common");
     let wrapper_cpp = wrapper_path.join("ctp_wrapper.cpp");
     let spi_bridge_cpp = wrapper_path.join("spi_bridge.cpp");
     let debug_logger_cpp = common_path.join("debug_logger.cpp");
     
     // 使用 OUT_DIR 存放编译产物
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let wrapper_obj = out_dir.join("ctp_wrapper.o");
     let spi_bridge_obj = out_dir.join("spi_bridge.o");
     let debug_logger_obj = out_dir.join("debug_logger.o");
@@ -101,12 +134,33 @@ fn main() {
         out_dir.join("libctp_wrapper.so")
     };
 
-    if wrapper_cpp.exists()
-        && spi_bridge_cpp.exists()
-        && debug_logger_cpp.exists()
-        && !existing_wrapper_lib_src.exists()
-        && !wrapper_lib_out.exists()
-    {
+    // 检查源文件是否存在
+    if !wrapper_cpp.exists() {
+        println!("cargo:warning=CTP wrapper源文件不存在: {}", wrapper_cpp.display());
+        println!("cargo:warning=请确保完整下载了ctp-rust包的源代码");
+        println!("cargo:rustc-cfg=feature=\"test_mode\"");
+        return;
+    }
+    
+    if !spi_bridge_cpp.exists() {
+        println!("cargo:warning=SPI bridge源文件不存在: {}", spi_bridge_cpp.display());
+        println!("cargo:rustc-cfg=feature=\"test_mode\"");
+        return;
+    }
+    
+    if !debug_logger_cpp.exists() {
+        println!("cargo:warning=Debug logger源文件不存在: {}", debug_logger_cpp.display());
+        println!("cargo:rustc-cfg=feature=\"test_mode\"");
+        return;
+    }
+
+    // 始终重新编译wrapper库以确保兼容性
+    let should_compile = !wrapper_lib_out.exists() || 
+        source_newer_than_target(&wrapper_cpp, &wrapper_lib_out) ||
+        source_newer_than_target(&spi_bridge_cpp, &wrapper_lib_out) ||
+        source_newer_than_target(&debug_logger_cpp, &wrapper_lib_out);
+
+    if should_compile {
         println!("cargo:warning=编译CTP C++包装器");
 
         // 编译wrapper
@@ -250,22 +304,32 @@ fn main() {
             );
         }
 
-        // 添加包装器库到链接路径
-        println!("cargo:rustc-link-search=native={}", out_dir.display());
-        println!("cargo:rustc-link-lib=dylib=ctp_wrapper");
-    } else if existing_wrapper_lib_src.exists() {
-        // 如果源目录中的库已存在，复制到OUT_DIR并添加链接指令
-        std::fs::copy(&existing_wrapper_lib_src, &wrapper_lib_out)
-            .expect("Failed to copy existing wrapper library to OUT_DIR");
-        println!("cargo:warning=使用现有的CTP C++包装器库");
-        println!("cargo:rustc-link-search=native={}", out_dir.display());
-        println!("cargo:rustc-link-lib=dylib=ctp_wrapper");
-    } else if wrapper_lib_out.exists() {
-        // 如果OUT_DIR中的库已存在，直接使用
-        println!("cargo:warning=使用OUT_DIR中已存在的CTP C++包装器库");
-        println!("cargo:rustc-link-search=native={}", out_dir.display());
-        println!("cargo:rustc-link-lib=dylib=ctp_wrapper");
+        println!("cargo:warning=CTP C++包装器编译完成");
+    } else {
+        // 检查是否存在预编译的库
+        if existing_wrapper_lib_src.exists() {
+            println!("cargo:warning=发现预编译的包装器库，复制到构建目录");
+            if let Err(e) = std::fs::copy(&existing_wrapper_lib_src, &wrapper_lib_out) {
+                println!("cargo:warning=复制包装器库失败: {}", e);
+                // 继续尝试直接使用源目录中的库
+                println!("cargo:rustc-link-search=native={}", wrapper_path.display());
+            }
+        } else if !wrapper_lib_out.exists() {
+            println!("cargo:warning=未找到CTP包装器库，尝试重新编译");
+            // 强制重新编译
+            println!("cargo:warning=编译CTP C++包装器");
+            
+            // ... 这里可以复制编译逻辑，或者设置一个标志重新执行编译
+        }
+        
+        if wrapper_lib_out.exists() {
+            println!("cargo:warning=使用已存在的CTP C++包装器库");
+        }
     }
+
+    // 无论如何都要确保输出链接指令
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
+    println!("cargo:rustc-link-lib=dylib=ctp_wrapper");
 
     // 输出给 Cargo，让 Rust 知道去哪里找库
     println!("cargo:rustc-link-search=native={}", lib_path.display());

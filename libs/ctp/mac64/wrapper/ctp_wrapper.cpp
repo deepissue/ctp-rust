@@ -1,7 +1,7 @@
 #include "ctp_wrapper.h"
+#include "../../common/debug_logger.h"
 #include "../include/ThostFtdcMdApi.h"
 #include "../include/ThostFtdcTraderApi.h"
-#include "../../common/debug_logger.h"
 #include <iostream>
 #include <stdio.h>
 // MD API wrappers

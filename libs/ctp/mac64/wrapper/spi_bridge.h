@@ -1,8 +1,8 @@
 #ifndef SPI_BRIDGE_H
 #define SPI_BRIDGE_H
 
-#include "../thostmduserapi_se.framework/Versions/A/Headers/ThostFtdcMdApi.h"
-#include "../thosttraderapi_se.framework/Versions/A/Headers/ThostFtdcTraderApi.h"
+#include "../include/ThostFtdcMdApi.h"
+#include "../include/ThostFtdcTraderApi.h"
 
 #ifdef __cplusplus
 extern "C" {

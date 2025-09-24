@@ -1,8 +1,8 @@
 #ifndef CTP_WRAPPER_H
 #define CTP_WRAPPER_H
 
-#include "spi_bridge.h"
 #include "../../common/debug_logger.h"
+#include "spi_bridge.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,7 +150,7 @@ int CThostFtdcTraderApi_ReqQrySettlementInfo(void *api,
 const char *CThostFtdcTraderApi_GetApiVersion();
 
 // Debug logging functions
-void CTP_InitializeDebugLogging(const CtpLogConfig* config);
+void CTP_InitializeDebugLogging(const CtpLogConfig *config);
 void CTP_CleanupDebugLogging();
 
 #ifdef __cplusplus
