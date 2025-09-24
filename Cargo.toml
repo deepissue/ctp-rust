@@ -1,0 +1,78 @@
+[package]
+name = "ctp-rust"
+version = "1.0.1"
+authors = ["36625090 <36625090@qq.com>"]
+edition = "2021"
+description = "Safe Rust bindings for CTP (Comprehensive Transaction Platform) and its variations for Chinese financial markets"
+homepage = "https://github.com/deepissue/ctp-rust"
+repository = "https://github.com/deepissue/ctp-rust"
+readme = "README.md"
+keywords = ["ctp", "trading", "finance", "ffi", "china"]
+categories = ["api-bindings", "finance", "external-ffi-bindings"]
+license = "MIT/Apache-2.0"
+
+[lib]
+name = "ctp_rust"
+path = "src/lib.rs"
+
+[features]
+channel = ["crossbeam-channel"]
+default = ["ctp"]  # Default SDK to build
+ctp = []          # CTP SDK
+integration = []  # Integration tests that require CTP libraries
+test_mode = []    # Test mode without CTP libraries
+
+# Ensure only one SDK is enabled
+[package.metadata.features]
+mutually_exclusive = ["ctp"]
+
+[dependencies]
+crossbeam-channel = { version = "0.5", optional = true }
+tokio = { version = "1.42", features = ["full"] }
+memchr = "2.3.3"
+encoding = "0.2"
+simple-error = "0.3.1"
+# time="0.1.43"
+time="0.3"
+tracing = "0.1"
+dotenvy = "0.15"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"
+
+[build-dependencies]
+bindgen="0.70"
+# For GB18030 encoding/decoding
+encoding = "0.2"
+# For XML parsing
+xmltree="0.11.0"
+simple-error = "0.3.1"
+
+# Examples
+[[example]]
+name = "md_basic"
+path = "examples/md_basic.rs"
+
+[[example]]
+name = "async_md_basic"
+path = "examples/async_md_basic.rs"
+
+[[example]]
+name = "trader_basic"
+path = "examples/trader_basic.rs"
+
+[[example]]
+name = "encoding_demo"
+path = "examples/encoding_demo.rs"
+
+[[example]]
+name = "error_handling"
+path = "examples/error_handling.rs"
+
+[profile.release]
+#strip = true  # Automatically strip symbols from the binary.
+opt-level = 3
+lto = true
+codegen-units = 1

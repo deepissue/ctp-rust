@@ -1,0 +1,17 @@
+target/
+.claude/
+.DS_Store
+
+# 编译产物
+*.o
+*.so
+*.dylib
+*.dll
+*.lib
+*.exp
+
+# CTP连接文件
+*.con
+.env
+libs/ctp/mac64/thostmduserapi_se.framework
+libs/ctp/mac64/thosttraderapi_se.framework
