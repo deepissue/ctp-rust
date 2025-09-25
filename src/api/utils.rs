@@ -1,6 +1,6 @@
 use std::path::{Path, MAIN_SEPARATOR};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::CtpError;
 pub fn normalize_flow_path(path: &str) -> Result<String, CtpError> {
@@ -32,6 +32,6 @@ pub fn normalize_flow_path(path: &str) -> Result<String, CtpError> {
         normalized.push(MAIN_SEPARATOR);
     }
 
-    debug!("Path normalized: '{}' -> '{}'", path, normalized);
+    trace!("Path normalized: '{}' -> '{}'", path, normalized);
     Ok(normalized)
 }

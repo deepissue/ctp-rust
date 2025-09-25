@@ -2,8 +2,6 @@
 //!
 //! 提供期货行情数据订阅和接收功能
 
-use tracing::debug;
-
 use crate::api::utils::normalize_flow_path;
 use crate::api::{safe_cstr_to_string, to_cstring, CtpApi};
 use crate::encoding::GbkConverter;
@@ -311,10 +309,6 @@ impl MdApi {
             .as_ref()
             .map(|s| s.as_ptr())
             .unwrap_or(ptr::null());
-        debug!(
-            "flow_path_ptr: {:?}",
-            flow_path_cstr.as_ref().map(|s| s.as_ptr())
-        );
         let api_ptr = unsafe {
             CThostFtdcMdApi_CreateFtdcMdApi(
                 flow_path_ptr,

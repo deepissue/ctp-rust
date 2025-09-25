@@ -90,6 +90,8 @@ void DebugLogger::debug(const char *file, int line, const char *func,
   if (use_file_ && file_stream_.is_open()) {
     file_stream_ << log_message << std::endl;
     file_stream_.flush(); // 立即刷新以确保实时写入
+    std::cout << log_message << std::endl;
+    std::cout.flush();
   } else {
     std::cout << log_message << std::endl;
     std::cout.flush();
